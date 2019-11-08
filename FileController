@@ -1,0 +1,794 @@
+
+@RequestMapping(value = "api/v1/file")
+@RestController
+@Api(value = "FileController", description = "文件基本操作")
+public class FileController {
+
+	private static Logger log = LoggerFactory.getLogger(FileController.class.getName());
+
+	@Autowired
+	private ProjectInfoService projectInfoService ;
+	
+	@Autowired
+	private IssueInfoService issueInfoService;
+	
+	@Autowired
+	private UserService userService;
+	
+	@Autowired
+	private GetUserInfo userRequestBody;
+
+	/**
+	 * 项目导入功能
+	 * @param file
+	 * @return
+	 */
+	@ApiOperation(value = "项目导入功能", notes = "项目导入功能")
+	@RequestMapping(value = "/projectUpload", method = RequestMethod.POST)
+	public ResponseBaseBody projectUpload(@RequestParam("fileName") MultipartFile file) {
+		
+		ResponseBaseBody response = new ResponseBaseBody();
+		
+		//获取的登录的用户的信息
+		UserRequestBody userBody = userRequestBody.getResponse();
+		
+		
+		if (file.isEmpty()) {
+			response.setCode(MessageContants.FILE_IMPORTNULL_CODE);
+			response.setMessage(MessageContants.FILE_IMPORTNULL_MESSAGE);
+			return response;
+		}
+		
+		
+		WebApplicationContext webApplicationContext = (WebApplicationContext)SpringContextUtils.getApplicationContext(); 
+        ServletContext servletContext = webApplicationContext.getServletContext();
+        String realPath = servletContext.getRealPath("/");
+
+		// 文件上传后的路径 ,目录需要更改
+		
+		String filePath = realPath + file.getOriginalFilename() ;
+		
+		File dest = new File(filePath);
+		
+//		log.info("文件的保存路径:"+filePath);
+		boolean flag = true;
+		// 检测是否存在目录
+		if (!dest.getParentFile().exists()) {
+			flag = dest.getParentFile().mkdirs();
+		}
+		try {
+			if(flag) {
+			file.transferTo(dest);
+			// 进行文件的解析
+			projectInfoService.projectImport(filePath,response,userBody.getUserId());
+			// 解析成功删除该目录下的文件，待定??
+			response.setCode(MessageContants.FILE_IMPORTSUCCESS_CODE);
+			response.setMessage(MessageContants.FILE_IMPORTSUCCESS_MESSAGE);
+			return response;}
+		} catch (IllegalStateException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		response.setCode(MessageContants.FILE_IMPORTFAILE_CODE);
+		response.setMessage(MessageContants.FILE_IMPORTFAILE_MESSAGE);
+		return response;
+	}
+	
+	/**
+	 * 问题信息导入功能
+	 * @param file
+	 * @return
+	 */
+	@ApiOperation(value = "问题信息导入功能", notes = "问题信息导入功能")
+	@RequestMapping(value = "/issueUpload", method = RequestMethod.POST)
+	public ResponseBaseBody issueUpload(@RequestParam("fileName") MultipartFile file) {
+		
+		ResponseBaseBody response = new ResponseBaseBody();
+		
+		//获取的登录的用户的信息
+		UserRequestBody userBody = userRequestBody.getResponse();
+		
+		
+		if (file.isEmpty()) {
+			response.setCode(MessageContants.FILE_IMPORTNULL_CODE);
+			response.setMessage(MessageContants.FILE_IMPORTNULL_MESSAGE);
+			return response;
+		}
+		
+		
+		WebApplicationContext webApplicationContext = (WebApplicationContext)SpringContextUtils.getApplicationContext(); 
+        ServletContext servletContext = webApplicationContext.getServletContext();
+        String realPath = servletContext.getRealPath("/");
+
+		// 文件上传后的路径 ,目录需要更改
+		
+		String filePath = realPath + file.getOriginalFilename() ;
+		
+		File dest = new File(filePath);
+		
+	//	log.info("问题信息文件的保存路径:"+filePath);
+        boolean flag = true;
+		// 检测是否存在目录
+		if (!dest.getParentFile().exists()) {
+			 flag = dest.getParentFile().mkdirs();
+		}
+		try {
+			if(flag) {
+			file.transferTo(dest);
+			// 进行文件的解析
+			ResponseBaseBody responseBaseBody =issueInfoService.issueImport(filePath,response,userBody.getUserId());
+			
+			response.setCode(responseBaseBody.getCode());
+			response.setMessage(responseBaseBody.getMessage());
+			return response;
+			}else {
+				response.setCode(MessageContants.FILE_IMPORTNULL_CODE);
+				response.setMessage(MessageContants.FILE_IMPORTNULL_MESSAGE);
+				return response;
+			}
+		} catch (IllegalStateException e) {
+			e.printStackTrace();
+			response.setCode(MessageContants.FILE_IMPORTDATAERROR_CODE);
+			response.setMessage(MessageContants.FILE_IMPORTISSUEERROR_MESSAGE);
+			return response;
+		} catch (ParseException e){
+			e.printStackTrace();
+			response.setCode(MessageContants.FILE_IMPORTDATAERROR_CODE);
+			response.setMessage("时间格式转换错误");
+			return response;
+		} catch (IOException e) {
+			e.printStackTrace();
+			response.setCode(MessageContants.FILE_IMPORTDATAERROR_CODE);
+			response.setMessage(MessageContants.FILE_IMPORTISSUEERROR_MESSAGE);
+			return response;
+		} catch (Exception e) {
+			e.printStackTrace();
+			response.setCode(MessageContants.FILE_IMPORTDATAERROR_CODE);
+			response.setMessage(MessageContants.FILE_IMPORTISSUEERROR_MESSAGE);
+			return response;
+		}
+	}
+	
+	/**
+	 * 用户导入功能
+	 * @param file
+	 * @return
+	 */
+	@ApiOperation(value = "用户导入功能", notes = "用户导入功能")
+	@RequestMapping(value = "/userUpload", method = RequestMethod.POST)
+	public ResponseBaseBody userUpload(@RequestParam("fileName") MultipartFile file) {
+		ResponseBaseBody response = new ResponseBaseBody();
+		
+		//获取的登录的用户的信息
+		UserRequestBody userBody = userRequestBody.getResponse();
+		
+		
+		if (file.isEmpty()) {
+			response.setCode(MessageContants.FILE_IMPORTNULL_CODE);
+			response.setMessage(MessageContants.FILE_IMPORTNULL_MESSAGE);
+			return response;
+		}
+		
+		
+		WebApplicationContext webApplicationContext = (WebApplicationContext)SpringContextUtils.getApplicationContext(); 
+        ServletContext servletContext = webApplicationContext.getServletContext();
+        String realPath = servletContext.getRealPath("/");
+
+		// 文件上传后的路径 ,目录需要更改
+		
+		String filePath = realPath + file.getOriginalFilename() ;
+		
+		File dest = new File(filePath);
+		
+		//log.info("文件的保存路径:"+filePath);
+		boolean flag = true;
+		// 检测是否存在目录
+		if (!dest.getParentFile().exists()) {
+			flag = dest.getParentFile().mkdirs();
+		}
+		try {
+			if(flag) {
+			file.transferTo(dest);
+			// 进行文件的解析
+			userService.userBatchImport(filePath,response,userBody.getUserId());
+			// 解析成功删除该目录下的文件，待定??
+			response.setCode(MessageContants.FILE_IMPORTSUCCESS_CODE);
+			response.setMessage(MessageContants.FILE_IMPORTUSERSUCCESS_MESSAGE);
+			return response;}
+		} catch (IllegalStateException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		response.setCode(MessageContants.FILE_IMPORTFAILE_CODE);
+		response.setMessage(MessageContants.FILE_IMPORTFAILE_MESSAGE);
+		return response;
+	}
+	
+	/**
+	 * 用户信息批量导入功能
+	 * @param file
+	 * @return
+	 */
+	@ApiOperation(value = "用户信息批量导入功能", notes = "用户信息批量导入功能")
+	@RequestMapping(value = "/userGroupUpload", method = RequestMethod.POST)
+	@RequiredPermission("userOperator")
+	public ResponseBaseBody userGroupUpload(@RequestParam("fileName") MultipartFile file) {
+		ResponseBaseBody response = new ResponseBaseBody();
+		
+		//获取的登录的用户的信息
+		UserRequestBody userBody = userRequestBody.getResponse();
+		
+		
+		if (file.isEmpty()) {
+			response.setCode(MessageContants.FILE_IMPORTNULL_CODE);
+			response.setMessage(MessageContants.FILE_IMPORTNULL_MESSAGE);
+			return response;
+		}
+		
+		WebApplicationContext webApplicationContext = (WebApplicationContext)SpringContextUtils.getApplicationContext(); 
+        ServletContext servletContext = webApplicationContext.getServletContext();
+        String realPath = servletContext.getRealPath("/");
+
+		// 文件上传后的路径 ,目录需要更改
+		
+		String filePath = realPath + file.getOriginalFilename() ;
+		
+		File dest = new File(filePath);
+		
+		//log.info("文件的保存路径:"+filePath);
+		boolean flag = true;
+		// 检测是否存在目录
+		if (!dest.getParentFile().exists()) {
+			flag = dest.getParentFile().mkdirs();
+		}
+		try {
+			if(flag) {
+			file.transferTo(dest);
+			// 进行文件的解析
+			userService.userGroupBatchImport(filePath,response,userBody.getUserId());
+			// 解析成功删除该目录下的文件，待定??
+			response.setCode(MessageContants.FILE_IMPORTSUCCESS_CODE);
+			response.setMessage(MessageContants.FILE_IMPORTUSERSUCCESS_MESSAGE);
+			return response;}
+		} catch (IllegalStateException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		response.setCode(MessageContants.FILE_IMPORTFAILE_CODE);
+		response.setMessage(MessageContants.FILE_IMPORTFAILE_MESSAGE);
+		return response;
+		
+	}
+
+	/**
+	 * 存储校验文件下载功能
+	 * @param file
+	 * @return
+	 */
+	@ApiOperation(value = "存储校验文件下载功能", notes = "存储校验文件下载功能")
+	@RequestMapping(value = "/storageFileUpload", method = RequestMethod.POST)
+	public ResponseBaseBody storageFileUpload(@RequestParam("fileName") MultipartFile file) {
+		ResponseBaseBody response = new ResponseBaseBody();
+
+		//获取的登录的用户的信息
+		UserRequestBody userBody = userRequestBody.getResponse();
+
+
+		if (file.isEmpty()) {
+			response.setCode(MessageContants.FILE_IMPORTNULL_CODE);
+			response.setMessage(MessageContants.FILE_IMPORTNULL_MESSAGE);
+			return response;
+		}
+
+		WebApplicationContext webApplicationContext = (WebApplicationContext)SpringContextUtils.getApplicationContext();
+		ServletContext servletContext = webApplicationContext.getServletContext();
+		String realPath = servletContext.getRealPath("/");
+
+		// 文件上传后的路径 ,目录需要更改
+
+		String filePath = realPath + file.getOriginalFilename() ;
+
+		File dest = new File(filePath);
+
+		//log.info("文件的保存路径:"+filePath);
+		boolean flag = true;
+		// 检测是否存在目录
+		if (!dest.getParentFile().exists()) {
+			flag = dest.getParentFile().mkdirs();
+		}
+		try {
+			if(flag) {
+				file.transferTo(dest);
+				// 进行文件的解析
+				//blockStorageInfoService.blockStorageFileImport(filePath,response,userBody.getUserId());
+				// 解析成功删除该目录下的文件，待定??
+				response.setCode(MessageContants.FILE_IMPORTSUCCESS_CODE);
+				response.setMessage(MessageContants.FILE_IMPORTSUCCESS_MESSAGE);
+				return response;}
+		} catch (IllegalStateException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		response.setCode(MessageContants.INSERT_SUCCESS_MESSAGE);
+		response.setMessage(MessageContants.INSERT_SUCCESS_MESSAGE);
+		return response;
+
+	}
+	
+	/*//**
+	 * 文件上传
+	 * @param file
+	 * @return
+	 *//*
+	@RequestMapping(value = "/upload")
+	@ResponseBody
+	public String upload(@RequestParam("test") MultipartFile file) {
+		if (file.isEmpty()) {
+			return "文件为空";
+		}
+		// 获取文件名
+		String fileName = file.getOriginalFilename();
+		log.info("上传的文件名为：" + fileName);
+		// 文件上传后的路径
+		String filePath = "D://test//";
+		// 解决中文问题，liunx下中文路径，图片显示问题
+		// fileName = UUID.randomUUID() + suffixName;
+		File dest = new File(filePath + fileName);
+		// 检测是否存在目录
+		if (!dest.getParentFile().exists()) {
+			dest.getParentFile().mkdirs();
+		}
+		try {
+			file.transferTo(dest);
+			return "上传成功";
+		} catch (IllegalStateException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return "上传失败";
+	}*/
+	
+	
+	
+	@ApiOperation(value = "图片导入功能", notes = "图片导入功能")
+	@RequestMapping(value = "/pictureUpload", method = RequestMethod.POST)
+	public ResponseNoticeImageBody pictureUpload(@RequestParam("fileName") MultipartFile file) {
+		
+		ResponseNoticeImageBody response = new ResponseNoticeImageBody();	
+		
+		if (file.isEmpty()) {
+			response.setCode(MessageContants.PICTURE_IMPORTNULL_CODE);
+			response.setMessage(MessageContants.PICTURE_IMPORTNULL_MESSAGE);
+			return response;
+		}
+		
+		//获取图片原名称
+        String fileName = file.getOriginalFilename();
+        
+        //获取图片名称后缀
+        String suffix = fileName.substring(fileName.lastIndexOf('.'));
+
+        //获取客户端使用的场景
+        String osName = System.getProperties().getProperty("os.name");
+        
+        //生成唯一的新图片名
+        String newFileName = new Date().getTime() + suffix;
+        
+		String filePath= "";
+		 String URLPath = "";
+		if (osName.toLowerCase().startsWith("windows")) {
+            //Windows下
+        	 filePath = "D:/pictureUpload/";
+        	 URLPath=newFileName;
+        } else {
+            //Linux或Unix下
+        	String classPath = Thread.currentThread().getContextClassLoader()
+                    .getResource("").getPath();
+            String rootPath = "";
+            
+            if ("/".equals(File.separator)) {
+                String path = classPath.substring(0,
+                        classPath.indexOf("/WEB-INF/classes"));
+                rootPath = path.substring(0, path.lastIndexOf("/"));
+                rootPath = rootPath.replace("\\", "/");
+            }
+            
+            log.info("rootPath:"+rootPath);
+            
+            filePath = rootPath + "/pictureUpload/";
+            URLPath = newFileName;
+        }
+
+        String newFilePath = filePath + newFileName;
+    	
+        response.setNoticeImagePath(URLPath);		
+        
+		File dest = new File(newFilePath);
+		boolean flag = true;
+		// 检测是否存在目录
+		if (!dest.getParentFile().exists()) {
+			flag = dest.getParentFile().mkdirs();
+		}
+
+		//log.info("图片的保存路径:"+newFilePath);		
+		
+		try {
+			if(flag) {
+			file.transferTo(dest);			
+			response.setCode(MessageContants.PICTURE_IMPORTSUCCESS_CODE);
+			response.setMessage(MessageContants.PICTURE_IMPORTSUCCESS_MESSAGE);
+			return response;}
+		} catch (IllegalStateException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		response.setCode(MessageContants.PICTURE_IMPORTFAILE_CODE);
+		response.setMessage(MessageContants.PICTURE_IMPORTFAILE_MESSAGE);
+		return response;
+	}
+
+
+	/* *//**
+	  * 多文件上传
+	  * @param request
+	  * @return
+	  *//*
+    @RequestMapping(value = "/batchupload", method = RequestMethod.POST)
+    @ResponseBody
+    public String handleFileUpload(HttpServletRequest request) {
+        List<MultipartFile> files = ((MultipartHttpServletRequest) request)
+                .getFiles("file");
+        if(files.isEmpty()){
+        	return "文件为空" ;
+        }
+      // 文件上传后的路径
+        String filePath = "D://test//";
+        
+        MultipartFile file = null;
+        BufferedOutputStream stream = null;
+        for (int i = 0; i < files.size(); ++i) {
+            file = files.get(i);
+            if (!file.isEmpty()) {
+                try {
+                    byte[] bytes = file.getBytes();
+                    stream = new BufferedOutputStream(new FileOutputStream(
+                            new File(filePath + file.getOriginalFilename())));
+                    stream.write(bytes);
+                    stream.close();
+
+                } catch (Exception e) {
+                    stream = null;
+                    return "You failed to upload " + i + " => "
+                            + e.getMessage();
+                }
+            } else {
+                return "You failed to upload " + i
+                        + " because the file was empty.";
+            }
+        }
+        return "upload successful";
+    }
+	*/
+	
+	/**
+	 * 文件的下载
+	 * @param request
+	 * @param response
+	 * @return
+	 */
+	@ApiOperation(value = "文件下载", notes = "问题信息导出功能")
+	@RequestMapping(value = "/download", method = RequestMethod.GET)
+	@RequiredPermission("addTrace")
+	public String downloadFile(HttpServletRequest request,HttpServletResponse response) {
+		
+		WebApplicationContext webApplicationContext = (WebApplicationContext)SpringContextUtils.getApplicationContext(); 
+        ServletContext servletContext = webApplicationContext.getServletContext();
+        String realPath = servletContext.getRealPath("/");
+		
+		//String fileName = "db.sql";
+		String fileName = "IssueInfoList.xls";
+		File file = new File(realPath + fileName);
+	    FileInputStream fis = null;
+		if(file.exists()){
+	        try {
+	        	response.setCharacterEncoding(request.getCharacterEncoding());
+	            response.setContentType("application/octet-stream");
+	            fis = new FileInputStream(file);
+	            response.setHeader("Content-Disposition", "attachment; filename=" + file.getName());
+	            IOUtils.copy(fis,response.getOutputStream());
+	            response.flushBuffer();
+	        } catch (FileNotFoundException e) {
+	            e.printStackTrace();
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        } finally {
+	            if (fis != null) {
+	                try {
+	                    fis.close();
+	                } catch (IOException e) {
+	                    e.printStackTrace();
+	                }
+	            }
+	        }
+		}else{
+			return "文件不存在";
+		}
+		return null ;
+	}
+	
+	/**
+	 * 项目信息的下载
+	 * @param request
+	 * @param response
+	 * @return
+	 */
+	@ApiOperation(value = "文件下载", notes = "项目信息导出功能")
+	@RequestMapping(value = "/downloadProjectInfo", method = RequestMethod.GET)
+	@RequiredPermission("addTrace")
+	public String downloadProjectInfo(HttpServletRequest request,HttpServletResponse response) {
+		
+		WebApplicationContext webApplicationContext = (WebApplicationContext)SpringContextUtils.getApplicationContext(); 
+        ServletContext servletContext = webApplicationContext.getServletContext();
+        String realPath = servletContext.getRealPath("/");
+		
+		//String fileName = "db.sql";
+		String fileName = "ProjectInfoList.xls";
+		File file = new File(realPath + fileName);
+	    FileInputStream fis = null;
+		if(file.exists()){
+	        try {
+	        	response.setCharacterEncoding(request.getCharacterEncoding());
+	            response.setContentType("application/octet-stream");
+	            fis = new FileInputStream(file);
+	            response.setHeader("Content-Disposition", "attachment; filename=" + file.getName());
+	            IOUtils.copy(fis,response.getOutputStream());
+	            response.flushBuffer();
+	        } catch (FileNotFoundException e) {
+	            e.printStackTrace();
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        } finally {
+	            if (fis != null) {
+	                try {
+	                    fis.close();
+	                } catch (IOException e) {
+	                    e.printStackTrace();
+	                }
+	            }
+	        }
+		}else{
+			return "文件不存在";
+		}
+		return null ;
+	}
+	
+	/**
+	 * 硬件信息的下载
+	 * @param request
+	 * @param response
+	 * @return
+	 */
+	@ApiOperation(value = "硬件下载", notes = "硬件信息导出功能")
+	@RequestMapping(value = "/downloadHardwareInfo", method = RequestMethod.GET)
+	@RequiredPermission("addTrace")
+	public String downloadHardwareInfo(HttpServletRequest request,HttpServletResponse response) {
+		
+		WebApplicationContext webApplicationContext = (WebApplicationContext)SpringContextUtils.getApplicationContext(); 
+        ServletContext servletContext = webApplicationContext.getServletContext();
+        String realPath = servletContext.getRealPath("/");
+		
+		//String fileName = "db.sql";
+		String fileName = "DeviceInfoList.xls";
+		File file = new File(realPath + fileName);
+	    FileInputStream fis = null;
+		if(file.exists()){
+	        try {
+	        	response.setCharacterEncoding(request.getCharacterEncoding());
+	            response.setContentType("application/octet-stream");
+	            fis = new FileInputStream(file);
+	            response.setHeader("Content-Disposition", "attachment; filename=" + file.getName());
+	            IOUtils.copy(fis,response.getOutputStream());
+	            response.flushBuffer();
+	        } catch (FileNotFoundException e) {
+	            e.printStackTrace();
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        } finally {
+	            if (fis != null) {
+	                try {
+	                    fis.close();
+	                } catch (IOException e) {
+	                    e.printStackTrace();
+	                }
+	            }
+	        }
+		}else{
+			return "文件不存在";
+		}
+		return null ;
+	}
+	
+	/**
+	 * iaas信息的下载
+	 * @param request
+	 * @param response
+	 * @return
+	 */
+	@ApiOperation(value = "iaas信息下载", notes = "iaas信息导出功能")
+	@RequestMapping(value = "/downloadIaasInfo", method = RequestMethod.GET)
+	public String downloadIaasInfo(HttpServletRequest request,HttpServletResponse response) {
+		
+		WebApplicationContext webApplicationContext = (WebApplicationContext)SpringContextUtils.getApplicationContext(); 
+        ServletContext servletContext = webApplicationContext.getServletContext();
+        String realPath = servletContext.getRealPath("/");
+		
+		//String fileName = "db.sql";
+		String fileName = "iaasInfoList.xls";
+		File file = new File(realPath + fileName);
+	    FileInputStream fis = null;
+		if(file.exists()){
+	        try {
+	        	response.setCharacterEncoding(request.getCharacterEncoding());
+	            response.setContentType("application/octet-stream");
+	            fis = new FileInputStream(file);
+	            response.setHeader("Content-Disposition", "attachment; filename=" + file.getName());
+	            IOUtils.copy(fis,response.getOutputStream());
+	            response.flushBuffer();
+	        } catch (FileNotFoundException e) {
+	            e.printStackTrace();
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        } finally {
+	            if (fis != null) {
+	                try {
+	                    fis.close();
+	                } catch (IOException e) {
+	                    e.printStackTrace();
+	                }
+	            }
+	        }
+		}else{
+			return "文件不存在";
+		}
+		return null ;
+	}
+	
+	/**
+	 * 交付问题信息的下载
+	 * @param request
+	 * @param response
+	 * @return
+	 */
+	@ApiOperation(value = "交付问题信息下载", notes = "交付问题信息导出功能")
+	@RequestMapping(value = "/downloadDeliveryIssueInfo", method = RequestMethod.GET)
+	@RequiredPermission("addTrace")
+	public String downloadDeliveryIssueInfo(HttpServletRequest request,HttpServletResponse response) {
+		
+		WebApplicationContext webApplicationContext = (WebApplicationContext)SpringContextUtils.getApplicationContext(); 
+        ServletContext servletContext = webApplicationContext.getServletContext();
+        String realPath = servletContext.getRealPath("/");
+		
+		String fileName = "DeliveryIssueInfoList.xls";
+		File file = new File(realPath + fileName);
+	    FileInputStream fis = null;
+		if(file.exists()){
+	        try {
+	        	response.setCharacterEncoding(request.getCharacterEncoding());
+	            response.setContentType("application/octet-stream");
+	            fis = new FileInputStream(file);
+	            response.setHeader("Content-Disposition", "attachment; filename=" + file.getName());
+	            IOUtils.copy(fis,response.getOutputStream());
+	            response.flushBuffer();
+	        } catch (FileNotFoundException e) {
+	            e.printStackTrace();
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        } finally {
+	            if (fis != null) {
+	                try {
+	                    fis.close();
+	                } catch (IOException e) {
+	                    e.printStackTrace();
+	                }
+	            }
+	        }
+		}else{
+			return "文件不存在";
+		}
+		return null ;
+	}
+	
+	
+	
+	/**
+	 * 校验报告分批下载
+	 * @param request
+	 * @param response
+	 * @return
+	 */
+	@ApiOperation(value = "校验报告分批下载", notes = "校验报告分批下载")
+	@RequestMapping(value = "/downloadReport", method = RequestMethod.GET)
+	public String downloadReport(HttpServletRequest request,HttpServletResponse response,@PathParam("fileName")String fileName) {
+		
+		WebApplicationContext webApplicationContext = (WebApplicationContext)SpringContextUtils.getApplicationContext(); 
+
+        ServletContext servletContext = webApplicationContext.getServletContext();
+        String realPath = servletContext.getRealPath("/");
+		File file = new File(CleanPaths.cleanPath(realPath + "temp/" + fileName));
+	    FileInputStream fis = null;
+		if(file.exists()){
+	        try {
+	        	response.setCharacterEncoding(request.getCharacterEncoding());
+	            response.setContentType("application/octet-stream");
+	            fis = new FileInputStream(file);
+	            response.setHeader("Content-Disposition", "attachment; filename=" + file.getName());
+	            IOUtils.copy(fis,response.getOutputStream());
+	            response.flushBuffer();
+	        } catch (FileNotFoundException e) {
+	            e.printStackTrace();
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        } finally {
+	            if (fis != null) {
+	                try {
+	                    fis.close();
+	                } catch (IOException e) {
+	                    e.printStackTrace();
+	                }
+	            }
+	        }
+		}else{
+			return "文件不存在";
+		}
+		return null ;
+	}
+	
+	/**
+	 * 压缩报告下载
+	 * @param request
+	 * @param response
+	 * @return
+	 */
+	@ApiOperation(value = "下载压缩文件报告", notes = "下载压缩文件报告")
+	@RequestMapping(value = "/downloadFile", method = RequestMethod.GET)
+	public String downloadFile(HttpServletRequest request,HttpServletResponse response,@PathParam("path")String path) {
+		WebApplicationContext webApplicationContext = (WebApplicationContext)SpringContextUtils.getApplicationContext(); 
+
+        ServletContext servletContext = webApplicationContext.getServletContext();
+        String realPath = servletContext.getRealPath("/");
+        String filePath =  realPath+ "taskFolder/"+ path;
+		File file = new File(CleanPaths.cleanPath(filePath));
+	    FileInputStream fis = null;
+		if(file.exists()){
+	        try {
+	        	response.setCharacterEncoding(request.getCharacterEncoding());
+	            response.setContentType("application/octet-stream");
+	            fis = new FileInputStream(file);
+	            response.setHeader("Content-Disposition", "attachment; filename=" + file.getName());
+	            IOUtils.copy(fis,response.getOutputStream());
+	            response.flushBuffer();
+	        } catch (FileNotFoundException e) {
+	            e.printStackTrace();
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        } finally {
+	            if (fis != null) {
+	                try {
+	                    fis.close();
+	                } catch (IOException e) {
+	                    e.printStackTrace();
+	                }
+	            }
+	        }
+		}else{
+			return "文件不存在";
+		}
+		return null ;
+	}
+}
